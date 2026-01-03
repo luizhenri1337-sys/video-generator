@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, UploadFile, File
 from pydantic import BaseModel
 from datetime import datetime
 import os
@@ -6,8 +6,6 @@ import os
 app = FastAPI(title="Video Generator API")
 
 FILES_DIR = "files"
-
-# Garante que a pasta existe (importante no deploy)
 os.makedirs(FILES_DIR, exist_ok=True)
 
 
@@ -32,24 +30,33 @@ def health():
 @app.post("/generate-video")
 def generate_video(data: VideoRequest):
     """
-    Endpoint inicial (stub).
-    No futuro:
-    - gerar roteiro
-    - gerar áudio
-    - gerar imagens
-    - montar vídeo
+    Stub inicial de geração de vídeo.
     """
-
     timestamp = datetime.utcnow().strftime("%Y%m%d%H%M%S")
     filename = f"{FILES_DIR}/video_{timestamp}.txt"
 
-    # Simula geração de conteúdo
     with open(filename, "w", encoding="utf-8") as f:
         f.write(f"Título: {data.title}\n\n")
         f.write(f"Roteiro:\n{data.script}\n")
 
     return {
         "status": "success",
-        "message": "Video generation started",
         "file": filename
     }
+
+
+@app.post("/upload")
+def upload_file(file: UploadFile = File(...)):
+    """
+    Endpoint preparado para uploads (n8n, imagens, áudios).
+    """
+    file_path = os.path.join(FILES_DIR, file.filename)
+
+    with open(file_path, "wb") as f:
+        f.write(file.file.read())
+
+    return {
+        "status": "uploaded",
+        "filename": file.filename
+    }
+
