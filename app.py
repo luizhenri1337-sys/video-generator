@@ -1,46 +1,34 @@
-from fastapi import FastAPI, UploadFile, File
-from fastapi.responses import FileResponse
+from fastapi import FastAPI
+from pydantic import BaseModel
+import edge_tts
 import uuid
-import subprocess
 import os
 
 app = FastAPI()
 
-@app.post("/video")
-async def create_video(
-    audio: UploadFile = File(...),
-    image: UploadFile = File(...)
-):
-    uid = str(uuid.uuid4())
+# Pasta pública para arquivos
+FILES_DIR = "files"
+os.makedirs(FILES_DIR, exist_ok=True)
 
-    audio_path = f"/tmp/{uid}.mp3"
-    image_path = f"/tmp/{uid}.jpg"
-    video_path = f"/tmp/{uid}.mp4"
+class TTSRequest(BaseModel):
+    text: str
 
-    with open(audio_path, "wb") as f:
-        f.write(await audio.read())
+@app.post("/tts")
+async def text_to_speech(req: TTSRequest):
+    filename = f"{uuid.uuid4()}.mp3"
+    filepath = os.path.join(FILES_DIR, filename)
 
-    with open(image_path, "wb") as f:
-        f.write(await image.read())
-
-    command = [
-        "ffmpeg",
-        "-y",
-        "-loop", "1",
-        "-i", image_path,
-        "-i", audio_path,
-        "-c:a", "aac",
-        "-c:v", "libx264",
-        "-shortest",
-        "-pix_fmt", "yuv420p",
-        "-vf", "scale=1080:1920",
-        video_path
-    ]
-
-    subprocess.run(command, check=True)
-
-    return FileResponse(
-        video_path,
-        media_type="video/mp4",
-        filename="short.mp4"
+    communicate = edge_tts.Communicate(
+        text=req.text,
+        voice="pt-BR-FranciscaNeural",
+        rate="-10%",
+        volume="+0%"
     )
+
+    await communicate.save(filepath)
+
+    return {
+        "status": "ok",
+        "audio_url": f"/files/{filename}"
+    }
+
