@@ -1,34 +1,55 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
-import edge_tts
-import uuid
+from datetime import datetime
 import os
 
-app = FastAPI()
+app = FastAPI(title="Video Generator API")
 
-# Pasta pública para arquivos
 FILES_DIR = "files"
+
+# Garante que a pasta existe (importante no deploy)
 os.makedirs(FILES_DIR, exist_ok=True)
 
-class TTSRequest(BaseModel):
-    text: str
 
-@app.post("/tts")
-async def text_to_speech(req: TTSRequest):
-    filename = f"{uuid.uuid4()}.mp3"
-    filepath = os.path.join(FILES_DIR, filename)
+class VideoRequest(BaseModel):
+    title: str
+    script: str
 
-    communicate = edge_tts.Communicate(
-        text=req.text,
-        voice="pt-BR-FranciscaNeural",
-        rate="-10%",
-        volume="+0%"
-    )
 
-    await communicate.save(filepath)
-
+@app.get("/")
+def root():
     return {
         "status": "ok",
-        "audio_url": f"/files/{filename}"
+        "message": "Video Generator API running"
     }
 
+
+@app.get("/health")
+def health():
+    return {"status": "healthy"}
+
+
+@app.post("/generate-video")
+def generate_video(data: VideoRequest):
+    """
+    Endpoint inicial (stub).
+    No futuro:
+    - gerar roteiro
+    - gerar áudio
+    - gerar imagens
+    - montar vídeo
+    """
+
+    timestamp = datetime.utcnow().strftime("%Y%m%d%H%M%S")
+    filename = f"{FILES_DIR}/video_{timestamp}.txt"
+
+    # Simula geração de conteúdo
+    with open(filename, "w", encoding="utf-8") as f:
+        f.write(f"Título: {data.title}\n\n")
+        f.write(f"Roteiro:\n{data.script}\n")
+
+    return {
+        "status": "success",
+        "message": "Video generation started",
+        "file": filename
+    }
