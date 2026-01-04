@@ -3,6 +3,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from datetime import datetime
 import os
+import subprocess
 import edge_tts
 
 app = FastAPI(title="Video Generator API")
@@ -38,7 +39,6 @@ async def generate_video(data: VideoRequest):
         text=data.script,
         voice="pt-BR-AntonioNeural"
     )
-
     await communicate.save(audio_path)
 
     return {
@@ -74,9 +74,6 @@ def get_audio(filename: str):
     )
 
 
-import subprocess
-
-
 @app.post("/generate-video-mp4")
 async def generate_video_mp4(data: VideoRequest):
     timestamp = datetime.utcnow().strftime("%Y%m%d%H%M%S")
@@ -84,17 +81,17 @@ async def generate_video_mp4(data: VideoRequest):
     audio_path = f"{FILES_DIR}/audio_{timestamp}.mp3"
     video_path = f"{FILES_DIR}/video_{timestamp}.mp4"
 
-    # 1. Gerar áudio
+    # Gerar áudio
     communicate = edge_tts.Communicate(
         text=data.script,
         voice="pt-BR-AntonioNeural"
     )
     await communicate.save(audio_path)
 
-    # 2. Sanitizar texto para FFmpeg
+    # Sanitizar texto para FFmpeg
     safe_title = data.title.replace("'", "").replace(":", "")
 
-    # 3. Gerar vídeo com imagem + texto + áudio
+    # Gerar vídeo com imagem + texto + áudio
     command = [
         "ffmpeg",
         "-y",
@@ -116,3 +113,17 @@ async def generate_video_mp4(data: VideoRequest):
         "status": "success",
         "video_file": video_path
     }
+
+
+@app.get("/files/{filename}")
+def get_file(filename: str):
+    file_path = os.path.join(FILES_DIR, filename)
+
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="File not found")
+
+    return FileResponse(
+        file_path,
+        media_type="video/mp4",
+        filename=filename
+    )
