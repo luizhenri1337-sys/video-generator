@@ -91,16 +91,22 @@ async def generate_video_mp4(data: VideoRequest):
     )
     await communicate.save(audio_path)
 
-    # 2. Gerar vídeo simples com FFmpeg (fundo preto + áudio)
+    # 2. Sanitizar texto para FFmpeg
+    safe_title = data.title.replace("'", "").replace(":", "")
+
+    # 3. Gerar vídeo com imagem + texto + áudio
     command = [
         "ffmpeg",
         "-y",
-        "-f", "lavfi",
-        "-i", "color=c=black:s=1080x1920",
+        "-loop", "1",
+        "-i", f"{FILES_DIR}/background.jpg",
         "-i", audio_path,
         "-shortest",
+        "-vf",
+        f"scale=1080:1920,drawtext=text='{safe_title}':fontcolor=white:fontsize=64:x=(w-text_w)/2:y=150",
         "-c:v", "libx264",
         "-c:a", "aac",
+        "-pix_fmt", "yuv420p",
         video_path
     ]
 
