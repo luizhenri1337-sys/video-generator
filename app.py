@@ -1,4 +1,5 @@
-from fastapi import FastAPI, UploadFile, File
+from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from datetime import datetime
 import os
@@ -57,5 +58,19 @@ def upload_file(file: UploadFile = File(...)):
         "status": "uploaded",
         "filename": file.filename
     }
+
+
+@app.get("/audio/{filename}")
+def get_audio(filename: str):
+    file_path = os.path.join(FILES_DIR, filename)
+
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="Audio not found")
+
+    return FileResponse(
+        file_path,
+        media_type="audio/mpeg",
+        filename=filename
+    )
 
 
