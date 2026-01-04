@@ -74,3 +74,39 @@ def get_audio(filename: str):
     )
 
 
+import subprocess
+
+
+@app.post("/generate-video-mp4")
+async def generate_video_mp4(data: VideoRequest):
+    timestamp = datetime.utcnow().strftime("%Y%m%d%H%M%S")
+
+    audio_path = f"{FILES_DIR}/audio_{timestamp}.mp3"
+    video_path = f"{FILES_DIR}/video_{timestamp}.mp4"
+
+    # 1. Gerar áudio
+    communicate = edge_tts.Communicate(
+        text=data.script,
+        voice="pt-BR-AntonioNeural"
+    )
+    await communicate.save(audio_path)
+
+    # 2. Gerar vídeo simples com FFmpeg (fundo preto + áudio)
+    command = [
+        "ffmpeg",
+        "-y",
+        "-f", "lavfi",
+        "-i", "color=c=black:s=1080x1920",
+        "-i", audio_path,
+        "-shortest",
+        "-c:v", "libx264",
+        "-c:a", "aac",
+        video_path
+    ]
+
+    subprocess.run(command, check=True)
+
+    return {
+        "status": "success",
+        "video_file": video_path
+    }
