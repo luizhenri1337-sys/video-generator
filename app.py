@@ -2,6 +2,7 @@ from fastapi import FastAPI, UploadFile, File
 from pydantic import BaseModel
 from datetime import datetime
 import os
+import edge_tts
 
 app = FastAPI(title="Video Generator API")
 
@@ -28,28 +29,25 @@ def health():
 
 
 @app.post("/generate-video")
-def generate_video(data: VideoRequest):
-    """
-    Stub inicial de geração de vídeo.
-    """
+async def generate_video(data: VideoRequest):
     timestamp = datetime.utcnow().strftime("%Y%m%d%H%M%S")
-    filename = f"{FILES_DIR}/video_{timestamp}.txt"
+    audio_path = f"{FILES_DIR}/audio_{timestamp}.mp3"
 
-    with open(filename, "w", encoding="utf-8") as f:
-        f.write(f"Título: {data.title}\n\n")
-        f.write(f"Roteiro:\n{data.script}\n")
+    communicate = edge_tts.Communicate(
+        text=data.script,
+        voice="pt-BR-AntonioNeural"
+    )
+
+    await communicate.save(audio_path)
 
     return {
         "status": "success",
-        "file": filename
+        "audio_file": audio_path
     }
 
 
 @app.post("/upload")
 def upload_file(file: UploadFile = File(...)):
-    """
-    Endpoint preparado para uploads (n8n, imagens, áudios).
-    """
     file_path = os.path.join(FILES_DIR, file.filename)
 
     with open(file_path, "wb") as f:
@@ -59,4 +57,5 @@ def upload_file(file: UploadFile = File(...)):
         "status": "uploaded",
         "filename": file.filename
     }
+
 
